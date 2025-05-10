@@ -2,3 +2,4 @@
 *.pdf
 *.json
 *.png
+__pycache__/*
