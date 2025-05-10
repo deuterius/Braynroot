@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 class MentalMap:
     def __init__(self):
         self.graph = nx.Graph()
-        self.node_positions = {}
         self.node_labels = {}
 
     def add_node(self, node: str, label: str = None):
@@ -24,9 +23,11 @@ class MentalMap:
         else:
             self.node_labels[node] = node 
     
-    def add_edge(self, node1: str, node2: str):
+    def add_edge(self, node1: str, node2: str, label: str = ""):
         """Add an edge between two nodes."""
-        self.graph.add_edge(node1, node2)
+        
+        self.graph.add_edge(node1, node2, label=label)
+        
         
     def get_edge_list(self) -> List[tuple]:
         """Get the list of edges in the graph."""
