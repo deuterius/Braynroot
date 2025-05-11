@@ -65,14 +65,18 @@ class ConceptualMap:
             json.dump(data, f)
         logger.info(f"Graph exported to {filename}")
     
-    def import_from_json(self, filename: str):
+    def import_from_file_json(self, filename: str):
         """Import the graph from a JSON file."""
         with open(filename, 'r') as f:
             data = json.load(f)
-        self.graph = nx.node_link_graph(data)
-        self.node_labels = {node: node for node in self.graph.nodes()}
+        self.import_from_json(data)
         logger.info(f"Graph imported from {filename}")
     
+    def import_from_json(self, json_data):
+        self.graph = nx.node_link_graph(json_data)
+        self.node_labels = {node: node for node in self.graph.nodes()}
+        
+        
     def draw_graph(self, filename: str = "mental_map.png"):
         """Draw the graph and save it as an image."""
         plt.figure(figsize=(8, 6))

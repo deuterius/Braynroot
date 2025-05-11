@@ -1,15 +1,174 @@
 import streamlit as st
 from pathlib import Path
 import fitz  # PyMuPDF
-from streamlit_pdf_viewer import pdf_viewer # Ensure this is installed
-from datetime import datetime
-import requests
-import html
+import os
 import json
+import networkx as nx
+from datetime import datetime
+from streamlit_pdf_viewer import pdf_viewer
+import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgba
+import uuid
+import numpy as np
+from io import BytesIO
+from mentalmap import ConceptualMap
+import html
+import requests
+from multi_tool_agent.splitting_agent import split_text
+from multi_tool_agent.agent import suggest_addition, feedback
+import asyncio
+from pdf import pdf_to_text
 
 # --- CONFIGURATION ---
 UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(exist_ok=True)                              # :contentReference[oaicite:1]{index=1}
+GRAPH_DIR = Path(".")
+GRAPH_DIR.mkdir(exist_ok=True)
+
+def from_custom_to_netowrkx_format(input_json):
+    """
+    Transform a graph JSON from the first format to the NetworkX-compatible format.
+    
+    Args:
+        input_json (dict): Input JSON in the first format
+        
+    Returns:
+        dict: Transformed JSON in the NetworkX-compatible format
+    """
+    if type(input_json) is str:
+        try:
+            input_json = json.loads(input_json)
+        except json.JSONDecodeError:
+            raise ValueError("Invalid JSON string provided.")
+    
+    # Create the base structure for the output
+    output_json = {
+        "directed": False,
+        "multigraph": False,
+        "graph": {},
+        "nodes": [],
+        "links": []
+    }
+    
+    # Create a mapping from node IDs to node text
+    # This will be used for the links
+    node_id_to_text = {}
+    
+    # Process nodes
+    for node in input_json.get("nodes", []):
+        # Add node to output
+        output_json["nodes"].append({
+            "id": node["text"]  # Using the text as the node ID in the output
+        })
+        
+        # Store the mapping
+        node_id_to_text[node["id"]] = node["text"]
+    
+    # Process edges
+    for edge in input_json.get("edges", []):
+        # Get the source and target text using the mapping
+        source_text = node_id_to_text[edge["sourceId"]]
+        target_text = node_id_to_text[edge["targetId"]]
+        
+        # Add link to output
+        output_json["links"].append({
+            "label": edge["text"],
+            "source": source_text,
+            "target": target_text
+        })
+    
+    return output_json
+
+def from_networkx_to_custom_format(input_json):
+    """
+    Transform a graph JSON from NetworkX-compatible format back to the original format.
+    
+    Args:
+        input_json (dict): Input JSON in NetworkX-compatible format
+        
+    Returns:
+        dict: Transformed JSON in the original format
+    """
+    # Create the base structure for the output
+    output_json = {
+        "nodes": [],
+        "edges": []
+    }
+    
+    # Process nodes
+    for i, node in enumerate(input_json.get("nodes", [])):
+        x = 0  
+        y = 0  
+        
+        # Add node to output with default coordinates
+        output_json["nodes"].append({
+            "id": f"node-{i+1}",  # Generate a new ID like "node-1", "node-2", etc.
+            "x": x,
+            "y": y,
+            "text": node["id"]  # The "id" from input becomes the "text" in output
+        })
+    
+    # Create a mapping from node text to node ID
+    text_to_node_id = {node["text"]: node["id"] for node in output_json["nodes"]}
+    
+    # Process links
+    for i, link in enumerate(input_json.get("links", [])):
+        # Find the source and target node IDs using the mapping
+        source_id = text_to_node_id[link["source"]]
+        target_id = text_to_node_id[link["target"]]
+        
+        # Add edge to output
+        output_json["edges"].append({
+            "id": f"edge-{i+1}",  # Generate a new ID like "edge-1", "edge-2", etc.
+            "sourceId": source_id,
+            "targetId": target_id,
+            "text": link["label"]
+        })
+    
+    return output_json
+
+def export_graph(graph_json: str, filename):
+    with open(filename, 'w') as file:
+        file.write(graph_json)
+    
+def import_graph(filename):
+    with open(filename, 'r') as file:
+        graph_json = file.read()
+        graph_json = json.loads(graph_json)
+        
+    return graph_json
+
+def get_clean_text(pdf_file_path: Path) -> str:
+    raw_text = pdf_to_text(pdf_file_path)
+    try:
+        clean_text = asyncio.run(split_text(raw_text))
+        print("Clean text:", clean_text)
+    except Exception as e:
+        print(f"Error during text splitting: {e}")
+        clean_text = raw_text
+    return clean_text
+
+def get_feedback_graph(reference_text:str, g0: str, g1: str):
+    g0_json = from_custom_to_netowrkx_format(g0)
+    g1_json = from_custom_to_netowrkx_format(g1)
+    try:
+        feedback_response = asyncio.run(feedback(text=reference_text, g0=g0_json, g1=g1_json))
+    except Exception as e:
+        print(f"Error during feedback generation: {e}")
+        feedback_response = "Error generating feedback"
+    return feedback_response
+
+def get_suggest_addition(reference_text:str, g0: str, g1: str):
+    g0_json = from_custom_to_netowrkx_format(g0)
+    g1_json = from_custom_to_netowrkx_format(g1)
+    try:
+        g2_json, explanation = asyncio.run(suggest_addition(text=reference_text, g0=g0_json, g1=g1_json))
+    except Exception as e:
+        print(f"Error during suggestion generation: {e}")
+        explanation = "Error generating suggestion"
+        g2_json = g1_json
+    
+    return explanation, from_networkx_to_custom_format(g2_json)
 
 st.set_page_config(page_title="PDF Manager", layout="wide")
 
