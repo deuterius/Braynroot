@@ -185,32 +185,42 @@ if st.session_state.selected_pdf_display_path:
                     frameborder="0"></iframe>
                 """
                 st.markdown(iframe_code, unsafe_allow_html=True)
-                col_export, col_import = st.columns(2)
-    
-                with col_export:
-                    if st.button("📤 Export Graph"):
-                        response = requests.get("http://localhost:5000/api/graph")
-                        if response.status_code == 200:
-                            st.download_button(
-                                label="Download JSON",
-                                data=json.dumps(response.json(), indent=2),
-                                file_name="concept_map.json",
-                                mime="application/json"
-                            )
+
+                g0 = """{"edges": [], "nodes": []}"""
+
+                if 'button_clicked' not in st.session_state:
+                    st.session_state.button_clicked = False
+
+                feed_b, ori_b, sug_b, sub_b = st.columns(4)
+                with feed_b:
+                    if st.button("Feedback"):
+                        st.session_state.button_clicked = True
                 
-                with col_import:
-                    pass
-                    """
-                    uploaded_file = st.file_uploader("📥 Import Graph", type=["json"])
-                    if uploaded_file is not None:
-                        json_data = json.load(uploaded_file)
+                if st.session_state.button_clicked:
+                    response = requests.get("http://localhost:5000/api/graph")
+                    if response.status_code == 200:
+                        g1 = response.content.decode('utf-8')
+                        print(g1)
+                        choice = g1
+                        with ori_b:
+                            if st.button("Original"):
+                                choice = g1
+
+                        with sug_b:
+                            if st.button("Suggested"):
+                                # Codice di andre
+                                choice = g1
+
+                        with sub_b:
+                            if st.button("Submit"):
+                                g0 = choice
+                                st.session_state.button_clicked = False
+
+                        print(choice)
                         response = requests.post(
                             "http://localhost:5000/api/graph",
-                            json=json_data
+                            json=choice
                         )
-                        st.toast("Graph imported!" if response.ok else "Import failed!")
-                    """
-                
         with tab2:
             pass
 else:

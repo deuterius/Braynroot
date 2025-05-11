@@ -2,23 +2,20 @@
     <style>
         #conceptualMapContainer {
             font-family: sans-serif;
-            /* margin: 0; /* Applied by parent or specific styling */
-            /* overflow: hidden; /* Applied via inline style for clarity */
             background-color: #f0f0f0;
-            user-select: none; /* Prevent text selection during drag */
-            /* position: relative; /* Applied via inline style for clarity */
+            user-select: none; 
         }
 
         #conceptualMapContainer .toolbar {
             padding: 10px;
             background-color: #333;
             color: white;
-            position: absolute; /* Changed from fixed */
+            position: absolute; 
             top: 0;
             left: 0;
-            width: 100%; /* Relative to #conceptualMapContainer */
-            z-index: 1000; /* Ensure toolbar is on top */
-            display: flex; /* Align items in toolbar */
+            width: 100%; 
+            z-index: 1000; 
+            display: flex; 
             align-items: center;
             box-sizing: border-box;
         }
@@ -38,32 +35,32 @@
             background-color: #777;
         }
 
-        #conceptualMapContainer .button-like-label { /* Applied if used outside toolbar too, scope if needed */
-            display: inline-block; /* Make label behave like a button */
+        #conceptualMapContainer .button-like-label { 
+            display: inline-block; 
         }
 
 
         #conceptualMapContainer #graphContainer {
-            position: relative; /* For absolute positioning of nodes and editor */
-            width: 100%;    /* Changed from 100vw to fill parent */
-            height: 100%;   /* Changed from 100vh to fill parent */
-            padding-top: 50px; /* Account for toolbar height - adjust if toolbar height changes */
+            position: relative; 
+            width: 100%;    
+            height: 100%;   
+            padding-top: 50px; 
             box-sizing: border-box;
         }
 
-        #conceptualMapContainer #edgeContainer { /* ID selector, already unique within this component's scope */
+        #conceptualMapContainer #edgeContainer { 
             position: absolute;
-            top: 0; /* Relative to graphContainer's padding box */
-            left: 0; /* Relative to graphContainer's padding box */
+            top: 0; 
+            left: 0; 
             width: 100%;
             height: 100%;
-            pointer-events: none; /* SVG lines should not intercept mouse events meant for nodes */
+            pointer-events: none; 
         }
 
         #conceptualMapContainer .node {
             position: absolute;
-            background-color: #add8e6; /* Light blue */
-            border: 2px solid #4682b4; /* Steel blue */
+            background-color: #add8e6; 
+            border: 2px solid #4682b4; 
             border-radius: 8px;
             padding: 10px;
             min-width: 100px;
@@ -71,28 +68,28 @@
             cursor: grab;
             text-align: center;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            display: flex; /* For centering text vertically */
+            display: flex; 
             align-items: center;
             justify-content: center;
-            z-index: 10; /* Nodes above edges */
-            box-sizing: border-box; /* padding and border included in width/height */
+            z-index: 10; 
+            box-sizing: border-box; 
         }
 
         #conceptualMapContainer .node:active {
             cursor: grabbing;
-            border-color: #ff8c00; /* Dark orange when active */
+            border-color: #ff8c00; 
         }
 
         #conceptualMapContainer .node .node-text {
-            outline: none; /* Remove outline when contenteditable is focused */
-            min-width: 80px; /* Ensure some space for typing */
-            word-wrap: break-word; /* Allow text to wrap */
-            white-space: pre-wrap; /* Respect newlines */
-            cursor: text; /* Indicate text is editable */
+            outline: none; 
+            min-width: 80px; 
+            word-wrap: break-word; 
+            white-space: pre-wrap; 
+            cursor: text; 
         }
 
         #conceptualMapContainer .node.linking-source {
-            border-color: #32cd32; /* Lime green when it's a link source */
+            border-color: #32cd32; 
             box-shadow: 0 0 10px #32cd32;
         }
 
@@ -102,9 +99,9 @@
             right: -10px;
             width: 20px;
             height: 20px;
-            background-color: #ff6b6b; /* A soft red */
+            background-color: #ff6b6b; 
             color: white;
-            border: 1px solid #c44d4d; /* Darker red border */
+            border: 1px solid #c44d4d; 
             border-radius: 50%;
             cursor: pointer;
             display: flex;
@@ -113,18 +110,18 @@
             font-size: 14px;
             font-weight: bold;
             line-height: 1;
-            opacity: 0; /* Hidden by default */
+            opacity: 0; 
             transition: opacity 0.2s ease-in-out, transform 0.1s ease-in-out;
-            z-index: 15; /* Above node content */
+            z-index: 15; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
         #conceptualMapContainer .node:hover .node-delete-btn {
-            opacity: 1; /* Show on node hover */
+            opacity: 1; 
         }
 
         #conceptualMapContainer .node-delete-btn:hover {
-            background-color: #e74c3c; /* Darker red on hover */
+            background-color: #e74c3c; 
             transform: scale(1.1);
         }
         #conceptualMapContainer .node-delete-btn:active {
@@ -132,34 +129,32 @@
         }
 
 
-        #conceptualMapContainer .edge-line { /* These are classes on SVG elements */
+        #conceptualMapContainer .edge-line { 
             stroke: #555;
             stroke-width: 2;
-            pointer-events: auto; /* Allow clicks on the line for editing text */
+            pointer-events: auto; 
             cursor: pointer;
         }
 
         #conceptualMapContainer .edge-text {
             fill: #333;
-            font-size: 16px; /* Made text larger */
+            font-size: 16px; 
             text-anchor: middle;
             dominant-baseline: central;
-            pointer-events: auto; /* Allow clicks on the text for editing */
+            pointer-events: auto; 
             cursor: pointer;
         }
-        #conceptualMapContainer .edge-text-bg { /* Example for a background rect, if desired */
+        #conceptualMapContainer .edge-text-bg { 
             fill: rgba(255, 255, 255, 0.7);
             stroke: rgba(200,200,200,0.5);
             stroke-width: 1px;
         }
 
-
-        /* Temporary line for linking preview - ID selector, unique */
         #tempLinkLine {
             stroke: #32cd32;
             stroke-width: 2;
             stroke-dasharray: 5,5;
-            pointer-events: none; /* Should not interfere with clicks */
+            pointer-events: none; 
         }
     </style>
 
@@ -173,7 +168,6 @@
 
     <div id="graphContainer">
         <svg id="edgeContainer"></svg>
-        <!-- Nodes will be added here by JavaScript -->
         <input type="text" id="edgeTextEditor"
                style="position: absolute; display: none; z-index: 20;
                       background-color: white; border: 1px solid #aaa;
@@ -203,13 +197,90 @@
             let linkingSourceNode = null;
             let tempLinkLine = null;
             let currentEditingEdge = null;
-
-            // currentGraphJSON: Stores the JSON string of the graph state that is known to be
-            // consistent with the server (either loaded from server or successfully saved to server).
             let currentGraphJSON;
 
-            // --- Node Functions ---
-            function createNode(x, y, text = 'New Node', existingId = null) {
+            const DEFAULT_NODE_WIDTH = 100; 
+            const DEFAULT_NODE_HEIGHT = 40; 
+            const PLACEMENT_GAP = 15;       
+
+            function isOverlappingOrTooClose(rect1, rect2) {
+                const R1_left = rect1.x;
+                const R1_right = rect1.x + rect1.width;
+                const R1_top = rect1.y;
+                const R1_bottom = rect1.y + rect1.height;
+
+                const R2_left = rect2.x;
+                const R2_right = rect2.x + rect2.width;
+                const R2_top = rect2.y;
+                const R2_bottom = rect2.y + rect2.height;
+
+                const separated = 
+                    R1_right < R2_left - PLACEMENT_GAP ||  
+                    R1_left > R2_right + PLACEMENT_GAP || 
+                    R1_bottom < R2_top - PLACEMENT_GAP || 
+                    R1_top > R2_bottom + PLACEMENT_GAP;   
+
+                return !separated; 
+            }
+
+            function findNonOverlappingPosition(initialX, initialY, nodeWidthToPlace = DEFAULT_NODE_WIDTH, nodeHeightToPlace = DEFAULT_NODE_HEIGHT) {
+                const containerWidth = graphContainer.clientWidth;
+                const containerHeight = graphContainer.clientHeight;
+
+                function checkPosition(x, y) {
+                    const clampedX = Math.max(0, Math.min(x, containerWidth - nodeWidthToPlace));
+                    const clampedY = Math.max(0, Math.min(y, containerHeight - nodeHeightToPlace));
+
+                    const candidateRect = { x: clampedX, y: clampedY, width: nodeWidthToPlace, height: nodeHeightToPlace };
+                    let isConflict = false;
+                    for (const node of nodes) {
+                        if (!node.element) continue; 
+                        
+                        const existingNodeRect = {
+                            x: node.x,
+                            y: node.y,
+                            width: node.element.offsetWidth,
+                            height: node.element.offsetHeight
+                        };
+                        if (isOverlappingOrTooClose(candidateRect, existingNodeRect)) {
+                            isConflict = true;
+                            break;
+                        }
+                    }
+                    if (!isConflict) {
+                        return { x: clampedX, y: clampedY, found: true };
+                    }
+                    return { x: clampedX, y: clampedY, found: false }; 
+                }
+
+                let result = checkPosition(initialX, initialY);
+                if (result.found) return { x: result.x, y: result.y };
+
+                const step = 20; 
+                const maxRings = 15; 
+
+                for (let ring = 1; ring <= maxRings; ring++) {
+                    const distFromCenter = ring * step;
+                    for (let i = -ring; i <= ring; i++) {
+                        result = checkPosition(initialX + i * step, initialY - distFromCenter);
+                        if (result.found) return { x: result.x, y: result.y };
+                        result = checkPosition(initialX + i * step, initialY + distFromCenter);
+                        if (result.found) return { x: result.x, y: result.y };
+                    }
+                    for (let i = -ring + 1; i < ring; i++) {
+                        result = checkPosition(initialX - distFromCenter, initialY + i * step);
+                        if (result.found) return { x: result.x, y: result.y };
+                        result = checkPosition(initialX + distFromCenter, initialY + i * step);
+                        if (result.found) return { x: result.x, y: result.y };
+                    }
+                }
+                
+                console.warn("Could not find an ideal non-overlapping position after spiral search. Placing at/near initial suggested position.");
+                const fallbackResult = checkPosition(initialX, initialY); 
+                return { x: fallbackResult.x, y: fallbackResult.y };
+            }
+
+            function createNode(suggestedX, suggestedY, text = 'New Node', existingId = null) {
                 let nodeId;
                 if (existingId) {
                     nodeId = existingId;
@@ -222,11 +293,21 @@
                     nodeId = `node-${nodeIdCounter}`;
                 }
 
+                let finalX, finalY;
+                if (!existingId) { 
+                    const position = findNonOverlappingPosition(suggestedX, suggestedY);
+                    finalX = position.x;
+                    finalY = position.y;
+                } else { 
+                    finalX = suggestedX; 
+                    finalY = suggestedY;
+                }
+
                 const nodeDiv = document.createElement('div');
                 nodeDiv.classList.add('node');
                 nodeDiv.id = nodeId;
-                nodeDiv.style.left = `${x}px`;
-                nodeDiv.style.top = `${y}px`;
+                nodeDiv.style.left = `${finalX}px`;
+                nodeDiv.style.top = `${finalY}px`;
 
                 const nodeText = document.createElement('div');
                 nodeText.classList.add('node-text');
@@ -267,30 +348,101 @@
 
                 nodeText.addEventListener('blur', () => {
                     const node = nodes.find(n => n.id === nodeId);
-                    if (node && node.text !== nodeText.textContent) { // Only update if text actually changed
+                    if (node && node.text !== nodeText.textContent) { 
                         node.text = nodeText.textContent;
-                        // The auto-save will pick this change up as getGraphAsJSONString() will be different
                     }
                 });
                 nodeText.addEventListener('mousedown', (e) => e.stopPropagation());
 
                 graphContainer.appendChild(nodeDiv);
-                const newNodeData = { id: nodeId, x, y, text, element: nodeDiv, textElement: nodeText };
+                const newNodeData = { id: nodeId, x: finalX, y: finalY, text, element: nodeDiv, textElement: nodeText };
                 nodes.push(newNodeData);
                 return newNodeData;
             }
 
             function onNodeDragMouseMove(e) {
                 if (!activeNode) return;
+
                 const graphContainerRect = graphContainer.getBoundingClientRect();
-                let newX = e.clientX - dragOffsetX - graphContainerRect.left;
-                let newY = e.clientY - dragOffsetY - graphContainerRect.top;
                 const nodeWidth = activeNode.offsetWidth;
                 const nodeHeight = activeNode.offsetHeight;
+
+                // Calculate the desired position based on mouse, without collision checks yet
+                let desiredX = e.clientX - dragOffsetX - graphContainerRect.left;
+                let desiredY = e.clientY - dragOffsetY - graphContainerRect.top;
+                
+                // Initial clamping for desired position
+                let newX = Math.max(0, Math.min(desiredX, graphContainer.clientWidth - nodeWidth));
+                let newY = Math.max(0, Math.min(desiredY, graphContainer.clientHeight - nodeHeight));
+
+                const MAX_RESOLUTION_ATTEMPTS = 5; 
+                for (let attempt = 0; attempt < MAX_RESOLUTION_ATTEMPTS; attempt++) {
+                    let collisionDetectedInThisAttempt = false;
+                    const draggedNodeCurrentRect = { x: newX, y: newY, width: nodeWidth, height: nodeHeight };
+
+                    for (const otherNode of nodes) {
+                        if (otherNode.id === activeNode.id || !otherNode.element) continue;
+
+                        const otherNodeStaticRect = {
+                            x: otherNode.x,
+                            y: otherNode.y,
+                            width: otherNode.element.offsetWidth,
+                            height: otherNode.element.offsetHeight
+                        };
+
+                        if (isOverlappingOrTooClose(draggedNodeCurrentRect, otherNodeStaticRect)) {
+                            collisionDetectedInThisAttempt = true;
+
+                            const midDraggedX = draggedNodeCurrentRect.x + draggedNodeCurrentRect.width / 2;
+                            const midDraggedY = draggedNodeCurrentRect.y + draggedNodeCurrentRect.height / 2;
+                            const midOtherX = otherNodeStaticRect.x + otherNodeStaticRect.width / 2;
+                            const midOtherY = otherNodeStaticRect.y + otherNodeStaticRect.height / 2;
+
+                            const combinedHalfWidths = draggedNodeCurrentRect.width / 2 + otherNodeStaticRect.width / 2 + PLACEMENT_GAP;
+                            const combinedHalfHeights = draggedNodeCurrentRect.height / 2 + otherNodeStaticRect.height / 2 + PLACEMENT_GAP;
+
+                            const deltaX = midDraggedX - midOtherX;
+                            const deltaY = midDraggedY - midOtherY;
+
+                            const penetrationX = combinedHalfWidths - Math.abs(deltaX);
+                            const penetrationY = combinedHalfHeights - Math.abs(deltaY);
+
+                            if (penetrationX > 0 && penetrationY > 0) { // Ensure actual overlap before resolving
+                                if (penetrationX < penetrationY) {
+                                    // Push horizontally
+                                    if (deltaX > 0) { // Dragged node is to the right of other, push further right
+                                        newX = otherNodeStaticRect.x + otherNodeStaticRect.width + PLACEMENT_GAP;
+                                    } else { // Dragged node is to the left of other, push further left
+                                        newX = otherNodeStaticRect.x - draggedNodeCurrentRect.width - PLACEMENT_GAP;
+                                    }
+                                } else {
+                                    // Push vertically
+                                    if (deltaY > 0) { // Dragged node is below other, push further down
+                                        newY = otherNodeStaticRect.y + otherNodeStaticRect.height + PLACEMENT_GAP;
+                                    } else { // Dragged node is above other, push further up
+                                        newY = otherNodeStaticRect.y - draggedNodeCurrentRect.height - PLACEMENT_GAP;
+                                    }
+                                }
+                                // After adjusting, re-clamp to container boundaries and update current rect for next check
+                                newX = Math.max(0, Math.min(newX, graphContainer.clientWidth - nodeWidth));
+                                newY = Math.max(0, Math.min(newY, graphContainer.clientHeight - nodeHeight));
+                                draggedNodeCurrentRect.x = newX;
+                                draggedNodeCurrentRect.y = newY;
+                            }
+                        }
+                    }
+                    if (!collisionDetectedInThisAttempt) {
+                        break; // No collisions in this pass, position is stable
+                    }
+                }
+                
+                // Final clamping after all resolution attempts
                 newX = Math.max(0, Math.min(newX, graphContainer.clientWidth - nodeWidth));
                 newY = Math.max(0, Math.min(newY, graphContainer.clientHeight - nodeHeight));
+
                 activeNode.style.left = `${newX}px`;
                 activeNode.style.top = `${newY}px`;
+                
                 const nodeData = nodes.find(n => n.id === activeNode.id);
                 if (nodeData) {
                     nodeData.x = newX;
@@ -299,9 +451,8 @@
                 updateEdgesForNode(activeNode.id);
             }
 
+
             function onNodeDragMouseUp() {
-                // This function finishing implies a potential change in node position.
-                // Auto-save will compare getGraphAsJSONString() with currentGraphJSON.
                 activeNode = null;
                 document.removeEventListener('mousemove', onNodeDragMouseMove);
                 document.removeEventListener('mouseup', onNodeDragMouseUp);
@@ -329,10 +480,8 @@
                 edges = remainingEdges;
                 if (nodeToRemove.element && nodeToRemove.element.parentNode) nodeToRemove.element.remove();
                 nodes = nodes.filter(n => n.id !== nodeIdToRemove);
-                // Auto-save will pick this up.
             }
 
-            // --- Edge Functions ---
             function createEdge(sourceId, targetId, text = 'Relates to', existingId = null) {
                 let edgeId;
                 if (existingId) {
@@ -346,14 +495,13 @@
                 const edge = { id: edgeId, sourceId, targetId, text };
                 edges.push(edge);
                 renderEdge(edge);
-                // Auto-save will pick this up.
                 return edge;
             }
 
             function renderEdge(edge) {
                 const sourceNodeData = nodes.find(n => n.id === edge.sourceId);
                 const targetNodeData = nodes.find(n => n.id === edge.targetId);
-                if (!sourceNodeData || !targetNodeData) {
+                if (!sourceNodeData || !targetNodeData || !sourceNodeData.element || !targetNodeData.element) { // Added checks for element existence
                     if (edge.lineElement && edge.lineElement.parentNode) edge.lineElement.remove();
                     if (edge.textElement && edge.textElement.parentNode) edge.textElement.remove();
                     return;
@@ -418,7 +566,7 @@
                 if (currentEditingEdge === edgeToEdit && edgeTextEditor.style.display === 'block') {
                     edgeTextEditor.focus(); edgeTextEditor.select(); return;
                 }
-                if (currentEditingEdge && currentEditingEdge !== edgeToEdit) edgeTextEditor.blur(); // This will trigger commit/cancel
+                if (currentEditingEdge && currentEditingEdge !== edgeToEdit) edgeTextEditor.blur();
                 startEditingEdge(edgeToEdit);
             }
 
@@ -426,11 +574,10 @@
                 if (!currentEditingEdge) return;
                 if (currentEditingEdge.text !== edgeTextEditor.value) {
                     currentEditingEdge.text = edgeTextEditor.value;
-                    // Auto-save will pick this up.
                 }
                 edgeTextEditor.style.display = 'none';
                 if (currentEditingEdge.textElement) currentEditingEdge.textElement.style.visibility = 'visible';
-                renderEdge(currentEditingEdge); // Re-render to show new text
+                renderEdge(currentEditingEdge); 
                 currentEditingEdge = null;
             }
 
@@ -438,12 +585,11 @@
                 if (!currentEditingEdge) return;
                 edgeTextEditor.style.display = 'none';
                 if (currentEditingEdge.textElement) currentEditingEdge.textElement.style.visibility = 'visible';
-                // No change to data, so auto-save won't be triggered unnecessarily.
                 currentEditingEdge = null;
             }
 
             edgeTextEditor.addEventListener('blur', () => {
-                setTimeout(() => { // setTimeout to allow click on other elements to be processed before blur
+                setTimeout(() => { 
                     if (currentEditingEdge && document.activeElement !== edgeTextEditor) {
                          commitEdgeTextEdit();
                     }
@@ -461,10 +607,9 @@
                 });
             }
 
-            // --- Linking Logic ---
             function startLinking(sourceNodeId) {
                 const sourceNodeData = nodes.find(n => n.id === sourceNodeId);
-                if (!sourceNodeData) return;
+                if (!sourceNodeData || !sourceNodeData.element) return; // Added check for element
                 linkingSourceNode = sourceNodeData;
                 linkingSourceNode.element.classList.add('linking-source');
                 linkingHelpText.style.display = 'inline';
@@ -512,18 +657,17 @@
             }
 
             function finishLinking() {
-                if (linkingSourceNode) linkingSourceNode.element.classList.remove('linking-source');
+                if (linkingSourceNode && linkingSourceNode.element) linkingSourceNode.element.classList.remove('linking-source'); // Added check for element
                 linkingSourceNode = null;
                 linkingHelpText.style.display = 'none';
                 if (tempLinkLine) tempLinkLine.style.display = 'none';
                 document.removeEventListener('mousemove', onLinkingMouseMove);
             }
 
-            // --- Graph Utility Functions ---
             function clearGraph() {
                 if (currentEditingEdge) cancelEdgeTextEdit();
                 if (linkingSourceNode) cancelLinking();
-                nodes.forEach(node => node.element.remove());
+                nodes.forEach(node => { if (node.element) node.element.remove()});
                 edges.forEach(edge => {
                     if (edge.lineElement) edge.lineElement.remove();
                     if (edge.textElement) edge.textElement.remove();
@@ -544,7 +688,6 @@
                 clearGraph();
                 try {
                     const data = JSON.parse(jsonDataString);
-                    // Basic validation, can be more thorough
                     if (!data || typeof data.nodes === 'undefined' || typeof data.edges === 'undefined') {
                         throw new Error("Invalid JSON format: missing nodes or edges array.");
                     }
@@ -554,23 +697,21 @@
                     data.edges.forEach(edgeData => {
                         createEdge(edgeData.sourceId, edgeData.targetId, edgeData.text, edgeData.id);
                     });
-                    currentGraphJSON = jsonDataString; // Update state after successful load
+                    currentGraphJSON = jsonDataString; 
                 } catch (error) {
                     console.error("Failed to load graph from JSON:", error);
                     alert("Error loading graph: " + error.message);
-                    clearGraph(); // Clear again if parsing/creation failed midway
-                    currentGraphJSON = getGraphAsJSONString(); // Reset to empty graph state
+                    clearGraph(); 
+                    currentGraphJSON = getGraphAsJSONString(); 
                 }
             }
 
-            // --- Event Listeners & Initialization ---
-            currentGraphJSON = getGraphAsJSONString(); // Initialize with current (empty) graph state
+            currentGraphJSON = getGraphAsJSONString(); 
 
             addNodeBtn.addEventListener('click', () => {
-                const initialX = (graphContainer.clientWidth / 2) - 50;
-                const initialY = (graphContainer.clientHeight / 2) - 20;
-                createNode(Math.max(20, initialX), Math.max(20, initialY));
-                // Auto-save will pick this up.
+                const initialX = (graphContainer.clientWidth / 2) - (DEFAULT_NODE_WIDTH / 2);
+                const initialY = (graphContainer.clientHeight / 2) - (DEFAULT_NODE_HEIGHT / 2);
+                createNode(Math.max(0, initialX), Math.max(0, initialY));
             });
 
             exportJsonBtn.addEventListener('click', () => {
@@ -591,7 +732,7 @@
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        loadGraphFromJSON(e.target.result); // This will update currentGraphJSON
+                        loadGraphFromJSON(e.target.result); 
                     };
                     reader.onerror = (e) => {
                         console.error("File reading error:", e);
@@ -606,12 +747,9 @@
                 if (!e.target.closest('.node') && !linkingSourceNode) e.preventDefault();
             });
 
-
-            // Auto-save to server every 2 seconds
             setInterval(() => {
-                const jsonString = getGraphAsJSONString(); // Gets the live state
-                if (jsonString !== currentGraphJSON) { // Only save if live state differs from last known saved/loaded state
-                    // console.log("Auto-saving graph to server...");
+                const jsonString = getGraphAsJSONString(); 
+                if (jsonString !== currentGraphJSON) { 
                     fetch('/api/graph', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -619,30 +757,25 @@
                     })
                     .then(response => {
                         if (response.ok) {
-                            currentGraphJSON = jsonString; // Update our "last successfully saved" state
-                            // console.log("Graph auto-saved successfully.");
+                            currentGraphJSON = jsonString; 
                         } else {
                             console.error("Failed to auto-save graph. Server responded with:", response.status);
-                            // Optionally, handle retries or notify user
                         }
                     })
                     .catch(error => {
                         console.error("Error during auto-save:", error);
                     });
                 }
-            }, 500); // 2 seconds
+            }, 500); 
 
-            // Polling for updates from server every 1 second
-            let previousServerJsonString = null; // Stores the JSON string of the graph from the *previous* successful poll
-
+            let previousServerJsonString = null; 
             setInterval(() => {
                 const activeEl = document.activeElement;
                 const isNodeTextEditing = activeEl && activeEl.classList.contains('node-text');
                 const isEdgeTextEditing = activeEl === edgeTextEditor;
 
                 if (isNodeTextEditing || isEdgeTextEditing) {
-                    // console.log("Polling: User is actively editing. Skipping poll cycle.");
-                    return; // Skip this poll cycle if user is actively typing
+                    return; 
                 }
 
                 fetch('/api/graph')
@@ -650,14 +783,12 @@
                         if (!response.ok) {
                             throw new Error(`Network response was not ok: ${response.statusText} (${response.status})`);
                         }
-                        // Check for empty body before trying to parse JSON, treat as empty graph
                         if (response.status === 204 || response.headers.get("content-length") === "0") {
                             return { nodes: [], edges: [] }; 
                         }
                         return response.json();
                     })
                     .then(dataFromServer => {
-                        // Ensure dataFromServer is a valid graph structure, even if server sends null/undefined or malformed
                         const newServerJsonString = JSON.stringify(
                             (dataFromServer && typeof dataFromServer.nodes !== 'undefined' && typeof dataFromServer.edges !== 'undefined') 
                                 ? dataFromServer 
@@ -667,40 +798,22 @@
                         );
 
                         if (newServerJsonString === previousServerJsonString) {
-                            // Server state hasn't changed since the last time we successfully processed its state.
-                            // No action needed. Local changes (if any, and not yet auto-saved) will persist visually.
-                            // console.log("Polling: Server data unchanged since last poll processing.");
                         } else {
-                            // Server state IS different from what we last successfully processed from the server.
-                            const localCurrentJson = getGraphAsJSONString(); // Get the absolute current client-side state
+                            const localCurrentJson = getGraphAsJSONString(); 
                             
                             if (newServerJsonString !== localCurrentJson) {
-                                // The new server state is also different from our current live client state.
-                                // This means we need to load the server's version.
-                                // console.log("Polling: Server data changed and differs from local client state. Loading from server.");
                                 loadGraphFromJSON(newServerJsonString);
-                                // currentGraphJSON is updated inside loadGraphFromJSON
                             } else {
-                                // The new server state is different from previousServerJsonString, but it *matches*
-                                // our current live client state. This likely means our auto-save just updated the server,
-                                // and this poll is now seeing that fresh data. No UI reload needed.
-                                // We do, however, ensure currentGraphJSON reflects this new authoritative server state.
-                                // console.log("Polling: Server data changed, but matches current local client state (likely a recent auto-save). Updating internal checksums.");
                                 currentGraphJSON = newServerJsonString; 
                             }
                         }
-                        // Update previousServerJsonString to the state we just processed from the server.
-                        // This is crucial for the next poll cycle to correctly implement the "if server state hasn't changed" logic.
                         previousServerJsonString = newServerJsonString;
                     })
                     .catch(error => {
                         console.error("Error fetching graph updates:", error);
-                        // On error, previousServerJsonString is NOT updated.
-                        // This means the next successful poll will compare against the last known *good* server state,
-                        // which is the correct behavior to reassess if the server recovered or if the error persists.
                     });
-            }, 500); // 1 second
+            }, 500); 
 
-        }); // End of DOMContentLoaded
+        }); 
     </script>
 </div>
