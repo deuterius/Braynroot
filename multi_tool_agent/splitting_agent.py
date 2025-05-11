@@ -20,13 +20,42 @@ os.environ["GOOGLE_API_KEY"] = "AIzaSyDkMq3SUqW56rZ5EyrutxP-VbN8tJlinOs"
 logging.basicConfig(level=logging.INFO)
 
 prompt=""" 
-This agent specializes in transforming raw, unstructured text—typically generated from PDF conversions—into clean, structured educational content. Its main responsibilities are:
-- Removing non-informative or noisy elements (e.g., page numbers, footnotes, image placeholders, formatting artifacts).
-- Preserving the original content as much as possible, avoiding summarization or rephrasing.
-- Segmenting the cleaned text into coherent, pedagogically useful learning units.
-Each learning unit should group semantically related ideas or concepts, even if they span multiple paragraphs. The agent should avoid creating sections that are too short or overly fragmented. 
-It is encouraged to aggregate content when appropriate, as long as the resulting section remains coherent and thematically consistent. As a general guideline, each learning unit should be approximately 500 words in length.
-The final output consists of clearly separated sections, each representing a self-contained topic or theme that a student could learn independently.
+ROLE:
+This agent is a TEXT REFINEMENT SPECIALIST that CONVERTS UNSTRUCTURED, RAW TEXT (e.g., from PDFs) into CLEAN, STRUCTURED EDUCATIONAL CONTENT.
+
+NON-NEGOTIABLE TASKS:
+
+REMOVE ALL NOISE:
+
+ELIMINATE page numbers, footnotes, image placeholders, headers/footers, formatting artifacts.
+
+PRESERVE ORIGINAL CONTENT—NO SUMMARIZATION, NO REPHRASING.
+
+ORGANIZE INTO LEARNING UNITS:
+
+GROUP SEMANTICALLY RELATED IDEAS—even across paragraphs.
+
+AVOID FRAGMENTATION: Units MUST NOT be too short (e.g., <500 words).
+
+TARGET LENGTH: ~800 words per unit (PRIORITIZE COHERENCE OVER WORD COUNT, but please, not too short either).
+
+you CAN fuse multiple paragraphs into a single unit if they are closely related or too short individually.
+
+
+OUTPUT REQUIREMENTS:
+
+CLEARLY DELINEATED SECTIONS—each SELF-CONTAINED, THEMATICALLY CONSISTENT.
+
+NO LOSS OF KEY CONTENT—ACCURACY IS MANDATORY.
+
+FAILURE CONDITIONS:
+
+DO NOT summarize, paraphrase, or omit key educational material.
+
+DO NOT create disjointed or overly granular sections.
+
+SUCCESS METRIC:
+READY-TO-USE EDUCATIONAL MODULES—clean, logically structured, and pedagogically optimal for independent study.
 """
 
 split_agent = Agent(
@@ -85,12 +114,33 @@ async def _agent_call_async(query: str, runner:Runner, user_id, session_id):
 
 
 async def split_text(input_text: str):
-    user_prompt = f""" You are a text-processing and instructional-design agent. 
-    Your task is to transform raw textual input—converted from a complex file such as a PDF—into clean, structured educational content. 
-    The input text may include irrelevant or noisy elements (e.g., page numbers, footers, headers, figure/image placeholders, garbled characters). You MUST:
-    - Thoroughly CLEAN the input, removing all non-informative or noisy elements.
-    - SEGMENT the clean text into N meaningful SECTIONS based on semantic and structural coherence.
-    - Treat each SECTION as a LEARNING UNIT: group related concepts or ideas that a student could learn as a standalone topic.
+    user_prompt = f""" Role: You are a highly skilled text-processing and instructional-design agent, specializing in transforming unstructured, noisy input into polished, learner-ready educational content.
+
+Mission: Your critical task is to convert raw, messy text (extracted from complex files like PDFs) into clean, logically structured, and pedagogically sound learning material. The input may be cluttered with garbage elements—page numbers, headers/footers, broken symbols, image placeholders, or other artifacts. You MUST take aggressive action to:
+
+RUTHLESSLY CLEAN the text:
+
+Eliminate ALL non-content noise—every footer, header, page number, garbled character, or irrelevant artifact.
+
+Preserve ONLY meaningful, instructionally valuable text.
+
+INTELLIGENTLY SEGMENT the cleaned content:
+
+Divide the text into N coherent SECTIONS based on semantic logic and structural flow.
+
+NO arbitrary breaks—each section must reflect a natural thematic cluster.
+
+DESIGN FOR LEARNING:
+
+Treat EACH SECTION as a STANDALONE LEARNING UNIT.
+
+Ensure concepts within a unit are tightly related, enabling a student to master the topic independently.
+
+Non-negotiable: Your output MUST be pristine, well-organized, and instructionally optimized—ready for immediate educational use.
+
+DO NOT respond with tables, but rather with a clean text.
+
+Key Focus: Prioritize clarity, coherence, and pedagogical effectiveness in every decision.
 
     ## Input Data Format
     - INPUT TEXT: Between markers ### START TEXT ### and ### END TEXT ###
@@ -102,7 +152,7 @@ async def split_text(input_text: str):
     ### START TEXT ###\n\n {input_text} \n\n ### END TEXT ###
 """
     
-    await _agent_call_async(user_prompt,
+    return await _agent_call_async(user_prompt,
                             runner=runner,
                             user_id=USER_ID,
                             session_id=SESSION_ID)
