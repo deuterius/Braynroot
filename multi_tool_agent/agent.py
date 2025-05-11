@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
 import os
 import asyncio
-# from google.adk.models.lite_llm import LiteLlm # For multi-model support
+from google.adk.models.lite_llm import LiteLlm # For multi-model support
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
@@ -16,7 +16,8 @@ from json_validator import process_graph_string
 # Ignore all warnings
 warnings.filterwarnings("ignore")
 
-MODEL_GEMINI_2_0_FLASH = "gemini-2.0-flash"
+MODEL_GEMINI_2_0_FLASH = "gemini-2.5-flash-preview-04-17"
+MODEL_CLAUDE_SONNET_LATEST = "claude-3-7-sonnet-20250219"
 os.environ["GOOGLE_API_KEY"] = "AIzaSyDkMq3SUqW56rZ5EyrutxP-VbN8tJlinOs"
 logging.basicConfig(level=logging.INFO)
 MAX_ITERATIONS = 3
@@ -70,7 +71,7 @@ You MUST compare two versions of a graph (G0 and G1) representing the same educa
     """
 
 graph_agent = Agent(
-    name="Conceptual Map Assistant",
+    name="conceptual_map_assistant",
     model=MODEL_GEMINI_2_0_FLASH,
     description=(
         "A specialized study assistant that transforms educational texts into structured conceptual maps, identifying key concepts and their relationships to enhance learning and retention."
