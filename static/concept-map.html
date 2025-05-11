@@ -184,19 +184,13 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Get the main container for this instance. This is useful if you plan to have multiple instances.
-            // For now, assuming IDs are unique across the document as per original design.
-            // const mainContainer = document.getElementById('conceptualMapContainer'); // Or could be passed to a function
-
             const graphContainer = document.getElementById('graphContainer');
             const edgeContainer = document.getElementById('edgeContainer');
             const addNodeBtn = document.getElementById('addNodeBtn');
             const exportJsonBtn = document.getElementById('exportJsonBtn');
             const importFile = document.getElementById('importFile');
             const linkingHelpText = document.getElementById('linkingHelpText');
-
             const edgeTextEditor = document.getElementById('edgeTextEditor');
-            let currentEditingEdge = null;
 
             let nodes = [];
             let edges = [];
@@ -208,6 +202,11 @@
 
             let linkingSourceNode = null;
             let tempLinkLine = null;
+            let currentEditingEdge = null;
+
+            // currentGraphJSON: Stores the JSON string of the graph state that is known to be
+            // consistent with the server (either loaded from server or successfully saved to server).
+            let currentGraphJSON;
 
             // --- Node Functions ---
             function createNode(x, y, text = 'New Node', existingId = null) {
@@ -240,50 +239,40 @@
                 deleteBtn.innerHTML = 'x';
                 deleteBtn.title = 'Delete Node';
 
-                deleteBtn.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                });
+                deleteBtn.addEventListener('mousedown', (e) => e.stopPropagation());
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     removeNode(nodeId);
                 });
                 nodeDiv.appendChild(deleteBtn);
 
-
                 nodeDiv.addEventListener('mousedown', (e) => {
                     if (e.button !== 0) return;
                     if (e.target === nodeText && document.activeElement === nodeText) return;
                     if (e.target === deleteBtn) return;
-
                     e.preventDefault();
-
                     activeNode = nodeDiv;
                     const nodeRect = activeNode.getBoundingClientRect();
-                    // dragOffsetX/Y are relative to the node's top-left corner
                     dragOffsetX = e.clientX - nodeRect.left;
                     dragOffsetY = e.clientY - nodeRect.top;
-
                     document.addEventListener('mousemove', onNodeDragMouseMove);
                     document.addEventListener('mouseup', onNodeDragMouseUp);
                 });
 
                 nodeDiv.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
-                    if (linkingSourceNode) {
-                        cancelLinking();
-                    }
+                    if (linkingSourceNode) cancelLinking();
                     startLinking(nodeId);
                 });
 
                 nodeText.addEventListener('blur', () => {
                     const node = nodes.find(n => n.id === nodeId);
-                    if (node) {
+                    if (node && node.text !== nodeText.textContent) { // Only update if text actually changed
                         node.text = nodeText.textContent;
+                        // The auto-save will pick this change up as getGraphAsJSONString() will be different
                     }
                 });
-                nodeText.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                });
+                nodeText.addEventListener('mousedown', (e) => e.stopPropagation());
 
                 graphContainer.appendChild(nodeDiv);
                 const newNodeData = { id: nodeId, x, y, text, element: nodeDiv, textElement: nodeText };
@@ -294,20 +283,14 @@
             function onNodeDragMouseMove(e) {
                 if (!activeNode) return;
                 const graphContainerRect = graphContainer.getBoundingClientRect();
-                // Calculate target position for the node's top-left corner within graphContainer
                 let newX = e.clientX - dragOffsetX - graphContainerRect.left;
                 let newY = e.clientY - dragOffsetY - graphContainerRect.top;
-
                 const nodeWidth = activeNode.offsetWidth;
                 const nodeHeight = activeNode.offsetHeight;
-
-                // Constrain within graphContainer's client boundaries (content area)
                 newX = Math.max(0, Math.min(newX, graphContainer.clientWidth - nodeWidth));
                 newY = Math.max(0, Math.min(newY, graphContainer.clientHeight - nodeHeight));
-
                 activeNode.style.left = `${newX}px`;
                 activeNode.style.top = `${newY}px`;
-
                 const nodeData = nodes.find(n => n.id === activeNode.id);
                 if (nodeData) {
                     nodeData.x = newX;
@@ -317,6 +300,8 @@
             }
 
             function onNodeDragMouseUp() {
+                // This function finishing implies a potential change in node position.
+                // Auto-save will compare getGraphAsJSONString() with currentGraphJSON.
                 activeNode = null;
                 document.removeEventListener('mousemove', onNodeDragMouseMove);
                 document.removeEventListener('mouseup', onNodeDragMouseUp);
@@ -324,18 +309,11 @@
 
             function removeNode(nodeIdToRemove) {
                 const nodeToRemove = nodes.find(n => n.id === nodeIdToRemove);
-                if (!nodeToRemove) {
-                    console.warn("Node to remove not found:", nodeIdToRemove);
-                    return;
-                }
-
-                if (linkingSourceNode && linkingSourceNode.id === nodeIdToRemove) {
-                    cancelLinking();
-                }
+                if (!nodeToRemove) return;
+                if (linkingSourceNode && linkingSourceNode.id === nodeIdToRemove) cancelLinking();
 
                 const edgesToDelete = [];
                 const remainingEdges = [];
-
                 edges.forEach(edge => {
                     if (edge.sourceId === nodeIdToRemove || edge.targetId === nodeIdToRemove) {
                         edgesToDelete.push(edge);
@@ -343,26 +321,16 @@
                         remainingEdges.push(edge);
                     }
                 });
-
                 edgesToDelete.forEach(edge => {
-                    if (currentEditingEdge === edge) {
-                        cancelEdgeTextEdit();
-                    }
-                    if (edge.lineElement && edge.lineElement.parentNode) {
-                        edge.lineElement.remove();
-                    }
-                    if (edge.textElement && edge.textElement.parentNode) {
-                        edge.textElement.remove();
-                    }
+                    if (currentEditingEdge === edge) cancelEdgeTextEdit();
+                    if (edge.lineElement && edge.lineElement.parentNode) edge.lineElement.remove();
+                    if (edge.textElement && edge.textElement.parentNode) edge.textElement.remove();
                 });
                 edges = remainingEdges;
-
-                if (nodeToRemove.element && nodeToRemove.element.parentNode) {
-                    nodeToRemove.element.remove();
-                }
+                if (nodeToRemove.element && nodeToRemove.element.parentNode) nodeToRemove.element.remove();
                 nodes = nodes.filter(n => n.id !== nodeIdToRemove);
+                // Auto-save will pick this up.
             }
-
 
             // --- Edge Functions ---
             function createEdge(sourceId, targetId, text = 'Relates to', existingId = null) {
@@ -370,9 +338,7 @@
                 if (existingId) {
                     edgeId = existingId;
                     const idNum = parseInt(existingId.replace('edge-', ''));
-                    if (!isNaN(idNum)) {
-                        edgeIdCounter = Math.max(edgeIdCounter, idNum);
-                    }
+                    if (!isNaN(idNum)) edgeIdCounter = Math.max(edgeIdCounter, idNum);
                 } else {
                     edgeIdCounter++;
                     edgeId = `edge-${edgeIdCounter}`;
@@ -380,52 +346,43 @@
                 const edge = { id: edgeId, sourceId, targetId, text };
                 edges.push(edge);
                 renderEdge(edge);
+                // Auto-save will pick this up.
                 return edge;
             }
 
             function renderEdge(edge) {
                 const sourceNodeData = nodes.find(n => n.id === edge.sourceId);
                 const targetNodeData = nodes.find(n => n.id === edge.targetId);
-
                 if (!sourceNodeData || !targetNodeData) {
                     if (edge.lineElement && edge.lineElement.parentNode) edge.lineElement.remove();
                     if (edge.textElement && edge.textElement.parentNode) edge.textElement.remove();
                     return;
                 }
-
                 const x1 = sourceNodeData.x + sourceNodeData.element.offsetWidth / 2;
                 const y1 = sourceNodeData.y + sourceNodeData.element.offsetHeight / 2;
                 const x2 = targetNodeData.x + targetNodeData.element.offsetWidth / 2;
                 const y2 = targetNodeData.y + targetNodeData.element.offsetHeight / 2;
-
                 let line = document.getElementById(edge.id);
                 let edgeTextElement = document.getElementById(`${edge.id}-text`);
-
                 if (!line) {
                     line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     line.id = edge.id;
                     line.classList.add('edge-line');
                     edgeContainer.appendChild(line);
-
                     edgeTextElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     edgeTextElement.id = `${edge.id}-text`;
                     edgeTextElement.classList.add('edge-text');
                     edgeContainer.appendChild(edgeTextElement);
-
                     edge.lineElement = line;
                     edge.textElement = edgeTextElement;
                 }
-
                 edgeTextElement.removeEventListener('dblclick', edge._specificDblClickHandler);
                 edge._specificDblClickHandler = (event) => handleEdgeTextDblClick(edge, event);
                 edgeTextElement.addEventListener('dblclick', edge._specificDblClickHandler);
-
-
                 line.setAttribute('x1', x1);
                 line.setAttribute('y1', y1);
                 line.setAttribute('x2', x2);
                 line.setAttribute('y2', y2);
-
                 const midX = (x1 + x2) / 2;
                 const midY = (y1 + y2) / 2;
                 edgeTextElement.setAttribute('x', midX);
@@ -438,22 +395,17 @@
                 const textElement = currentEditingEdge.textElement;
                 const graphContainerRect = graphContainer.getBoundingClientRect();
                 const textRect = textElement.getBoundingClientRect();
-
                 edgeTextEditor.style.left = `${textRect.left - graphContainerRect.left}px`;
                 edgeTextEditor.style.top = `${textRect.top - graphContainerRect.top}px`;
-
                 const computedStyle = window.getComputedStyle(textElement);
                 edgeTextEditor.style.fontSize = computedStyle.fontSize;
                 edgeTextEditor.style.fontFamily = computedStyle.fontFamily || 'sans-serif';
                 edgeTextEditor.style.color = computedStyle.fill;
-
-                const editorPaddingX = 8;
-                const editorPaddingY = 4;
+                const editorPaddingX = 8; const editorPaddingY = 4;
                 edgeTextEditor.style.padding = `${editorPaddingY / 2}px ${editorPaddingX / 2}px`;
                 edgeTextEditor.style.width = `${Math.max(50, textRect.width) + editorPaddingX}px`;
                 edgeTextEditor.style.height = `${textRect.height + editorPaddingY}px`;
                 edgeTextEditor.style.lineHeight = `${textRect.height}px`;
-
                 edgeTextEditor.value = currentEditingEdge.text;
                 textElement.style.visibility = 'hidden';
                 edgeTextEditor.style.display = 'block';
@@ -463,65 +415,49 @@
 
             function handleEdgeTextDblClick(edgeToEdit, domEvent) {
                 if (domEvent) domEvent.stopPropagation();
-
                 if (currentEditingEdge === edgeToEdit && edgeTextEditor.style.display === 'block') {
-                    edgeTextEditor.focus();
-                    edgeTextEditor.select();
-                    return;
+                    edgeTextEditor.focus(); edgeTextEditor.select(); return;
                 }
-
-                if (currentEditingEdge && currentEditingEdge !== edgeToEdit) {
-                    edgeTextEditor.blur();
-                }
+                if (currentEditingEdge && currentEditingEdge !== edgeToEdit) edgeTextEditor.blur(); // This will trigger commit/cancel
                 startEditingEdge(edgeToEdit);
             }
 
             function commitEdgeTextEdit() {
                 if (!currentEditingEdge) return;
-
-                currentEditingEdge.text = edgeTextEditor.value;
-                edgeTextEditor.style.display = 'none';
-                if (currentEditingEdge.textElement) {
-                    currentEditingEdge.textElement.style.visibility = 'visible';
+                if (currentEditingEdge.text !== edgeTextEditor.value) {
+                    currentEditingEdge.text = edgeTextEditor.value;
+                    // Auto-save will pick this up.
                 }
-                renderEdge(currentEditingEdge);
+                edgeTextEditor.style.display = 'none';
+                if (currentEditingEdge.textElement) currentEditingEdge.textElement.style.visibility = 'visible';
+                renderEdge(currentEditingEdge); // Re-render to show new text
                 currentEditingEdge = null;
             }
 
             function cancelEdgeTextEdit() {
                 if (!currentEditingEdge) return;
-
                 edgeTextEditor.style.display = 'none';
-                if (currentEditingEdge.textElement) {
-                     currentEditingEdge.textElement.style.visibility = 'visible';
-                }
+                if (currentEditingEdge.textElement) currentEditingEdge.textElement.style.visibility = 'visible';
+                // No change to data, so auto-save won't be triggered unnecessarily.
                 currentEditingEdge = null;
             }
 
             edgeTextEditor.addEventListener('blur', () => {
-                setTimeout(() => {
+                setTimeout(() => { // setTimeout to allow click on other elements to be processed before blur
                     if (currentEditingEdge && document.activeElement !== edgeTextEditor) {
                          commitEdgeTextEdit();
                     }
                 }, 0);
             });
-
             edgeTextEditor.addEventListener('keydown', (event) => {
                 if (!currentEditingEdge) return;
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    commitEdgeTextEdit();
-                } else if (event.key === 'Escape') {
-                    cancelEdgeTextEdit();
-                }
+                if (event.key === 'Enter') { event.preventDefault(); commitEdgeTextEdit(); }
+                else if (event.key === 'Escape') cancelEdgeTextEdit();
             });
-
 
             function updateEdgesForNode(nodeId) {
                 edges.forEach(edge => {
-                    if (edge.sourceId === nodeId || edge.targetId === nodeId) {
-                        renderEdge(edge);
-                    }
+                    if (edge.sourceId === nodeId || edge.targetId === nodeId) renderEdge(edge);
                 });
             }
 
@@ -529,25 +465,19 @@
             function startLinking(sourceNodeId) {
                 const sourceNodeData = nodes.find(n => n.id === sourceNodeId);
                 if (!sourceNodeData) return;
-
                 linkingSourceNode = sourceNodeData;
                 linkingSourceNode.element.classList.add('linking-source');
                 linkingHelpText.style.display = 'inline';
-
                 if (!tempLinkLine) {
                     tempLinkLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     tempLinkLine.id = 'tempLinkLine';
                     edgeContainer.appendChild(tempLinkLine);
                 }
-
                 const startX = sourceNodeData.x + sourceNodeData.element.offsetWidth / 2;
                 const startY = sourceNodeData.y + sourceNodeData.element.offsetHeight / 2;
-                tempLinkLine.setAttribute('x1', startX);
-                tempLinkLine.setAttribute('y1', startY);
-                tempLinkLine.setAttribute('x2', startX);
-                tempLinkLine.setAttribute('y2', startY);
+                tempLinkLine.setAttribute('x1', startX); tempLinkLine.setAttribute('y1', startY);
+                tempLinkLine.setAttribute('x2', startX); tempLinkLine.setAttribute('y2', startY);
                 tempLinkLine.style.display = 'block';
-
                 document.addEventListener('mousemove', onLinkingMouseMove);
                 document.addEventListener('click', onLinkingClickTarget, { capture: true, once: true });
                 document.addEventListener('contextmenu', cancelLinking, { capture: true, once: true });
@@ -563,73 +493,59 @@
             }
 
             function onLinkingClickTarget(e) {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 const targetElement = e.target.closest('.node');
                 if (linkingSourceNode && targetElement && targetElement.id !== linkingSourceNode.id) {
                     const existingEdge = edges.find(edge =>
                         (edge.sourceId === linkingSourceNode.id && edge.targetId === targetElement.id) ||
                         (edge.sourceId === targetElement.id && edge.targetId === linkingSourceNode.id)
                     );
-                    if (!existingEdge) {
-                        createEdge(linkingSourceNode.id, targetElement.id);
-                    } else {
-                        alert("An edge already exists between these nodes.");
-                    }
+                    if (!existingEdge) createEdge(linkingSourceNode.id, targetElement.id);
+                    else alert("An edge already exists between these nodes.");
                 }
                 finishLinking();
             }
 
             function cancelLinking(e) {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
+                if (e) { e.preventDefault(); e.stopPropagation(); }
                 finishLinking();
             }
 
             function finishLinking() {
-                if (linkingSourceNode) {
-                    linkingSourceNode.element.classList.remove('linking-source');
-                }
+                if (linkingSourceNode) linkingSourceNode.element.classList.remove('linking-source');
                 linkingSourceNode = null;
                 linkingHelpText.style.display = 'none';
-                if (tempLinkLine) {
-                    tempLinkLine.style.display = 'none';
-                }
+                if (tempLinkLine) tempLinkLine.style.display = 'none';
                 document.removeEventListener('mousemove', onLinkingMouseMove);
-                // The other listeners (click, contextmenu) are {once: true}, so they auto-remove.
             }
 
             // --- Graph Utility Functions ---
             function clearGraph() {
-                if (currentEditingEdge) {
-                    cancelEdgeTextEdit();
-                }
-                if (linkingSourceNode) {
-                    cancelLinking();
-                }
-
+                if (currentEditingEdge) cancelEdgeTextEdit();
+                if (linkingSourceNode) cancelLinking();
                 nodes.forEach(node => node.element.remove());
                 edges.forEach(edge => {
                     if (edge.lineElement) edge.lineElement.remove();
                     if (edge.textElement) edge.textElement.remove();
                 });
-                nodes = [];
-                edges = [];
-                nodeIdCounter = 0;
-                edgeIdCounter = 0;
-                if (tempLinkLine && tempLinkLine.parentNode) {
-                    tempLinkLine.remove(); // Remove from DOM
-                    tempLinkLine = null;   // Nullify the variable
-                }
+                nodes = []; edges = []; nodeIdCounter = 0; edgeIdCounter = 0;
+                if (tempLinkLine && tempLinkLine.parentNode) { tempLinkLine.remove(); tempLinkLine = null; }
             }
 
-            function loadGraphFromJSON(jsonData) {
+            function getGraphAsJSONString() {
+                const graphData = {
+                    nodes: nodes.map(n => ({ id: n.id, x: n.x, y: n.y, text: n.text })),
+                    edges: edges.map(e => ({ id: e.id, sourceId: e.sourceId, targetId: e.targetId, text: e.text }))
+                };
+                return JSON.stringify(graphData, null, 2);
+            }
+
+            function loadGraphFromJSON(jsonDataString) {
                 clearGraph();
                 try {
-                    const data = JSON.parse(jsonData);
-                    if (!data.nodes || !data.edges) {
+                    const data = JSON.parse(jsonDataString);
+                    // Basic validation, can be more thorough
+                    if (!data || typeof data.nodes === 'undefined' || typeof data.edges === 'undefined') {
                         throw new Error("Invalid JSON format: missing nodes or edges array.");
                     }
                     data.nodes.forEach(nodeData => {
@@ -638,96 +554,153 @@
                     data.edges.forEach(edgeData => {
                         createEdge(edgeData.sourceId, edgeData.targetId, edgeData.text, edgeData.id);
                     });
+                    currentGraphJSON = jsonDataString; // Update state after successful load
                 } catch (error) {
                     console.error("Failed to load graph from JSON:", error);
                     alert("Error loading graph: " + error.message);
-                    clearGraph();
+                    clearGraph(); // Clear again if parsing/creation failed midway
+                    currentGraphJSON = getGraphAsJSONString(); // Reset to empty graph state
                 }
             }
 
-            function exportGraphToJSON() {
-                const graphData = {
-                    nodes: nodes.map(n => ({ id: n.id, x: n.x, y: n.y, text: n.text })),
-                    edges: edges.map(e => ({ id: e.id, sourceId: e.sourceId, targetId: e.targetId, text: e.text }))
-                };
-                const jsonString = JSON.stringify(graphData, null, 2);
-                return jsonString
-                // Download logic
+            // --- Event Listeners & Initialization ---
+            currentGraphJSON = getGraphAsJSONString(); // Initialize with current (empty) graph state
+
+            addNodeBtn.addEventListener('click', () => {
+                const initialX = (graphContainer.clientWidth / 2) - 50;
+                const initialY = (graphContainer.clientHeight / 2) - 20;
+                createNode(Math.max(20, initialX), Math.max(20, initialY));
+                // Auto-save will pick this up.
+            });
+
+            exportJsonBtn.addEventListener('click', () => {
+                const jsonString = getGraphAsJSONString();
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = 'conceptual_map.json';
-                document.body.appendChild(a); // Standard practice for downloads
+                document.body.appendChild(a);
                 a.click();
-                document.body.removeChild(a); // Clean up
+                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-            }
-
-            // --- Event Listeners ---
-            addNodeBtn.addEventListener('click', () => {
-                const initialX = (graphContainer.clientWidth / 2) - 50; // Center horizontally
-                const initialY = (graphContainer.clientHeight / 2) - 20; // Center vertically
-                createNode(
-                    Math.max(20, initialX), // Ensure not too close to edge
-                    Math.max(20, initialY)  // Ensure not too close to edge
-                );
             });
-
-            exportJsonBtn.addEventListener('click', exportGraphToJSON);
 
             importFile.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        loadGraphFromJSON(e.target.result);
+                        loadGraphFromJSON(e.target.result); // This will update currentGraphJSON
                     };
                     reader.onerror = (e) => {
                         console.error("File reading error:", e);
                         alert("Error reading file.");
                     }
                     reader.readAsText(file);
-                    event.target.value = null; // Reset file input
+                    event.target.value = null;
                 }
             });
 
             graphContainer.addEventListener('contextmenu', (e) => {
-                // Prevent graphContainer context menu only if not on a node (node handles its own)
-                // and not in linking mode (linking mode uses contextmenu to cancel)
-                if (!e.target.closest('.node') && !linkingSourceNode) {
-                    e.preventDefault();
-                }
+                if (!e.target.closest('.node') && !linkingSourceNode) e.preventDefault();
             });
 
-            // Optional: Click on graph container to commit edge text edits if any
-            graphContainer.addEventListener('click', (e) => {
-                if (currentEditingEdge && e.target !== edgeTextEditor && !e.target.closest('.edge-text')) {
-                    // Blur handler on edgeTextEditor should ideally handle this.
-                    // This is a fallback or can be more aggressive if needed.
-                    // For now, rely on blur handler.
-                }
-            });
-        });
-        // Auto-save to Flask every 2 seconds
-        setInterval(() => {
-            const jsonString = exportGraphToJSON();
-            fetch('/api/graph', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: jsonString
-            });
-        }, 500);
 
-        // Check for updates from Streamlit every 1 second
-        setInterval(() => {
-            fetch('/api/graph')
-                .then(response => response.json())
-                .then(data => {
-                    if(data && JSON.stringify(data) !== JSON.stringify(currentData)) {
-                        loadGraphFromJSON(JSON.stringify(data));
-                    }
-                });
-        }, 10000);
+            // Auto-save to server every 2 seconds
+            setInterval(() => {
+                const jsonString = getGraphAsJSONString(); // Gets the live state
+                if (jsonString !== currentGraphJSON) { // Only save if live state differs from last known saved/loaded state
+                    // console.log("Auto-saving graph to server...");
+                    fetch('/api/graph', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonString
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            currentGraphJSON = jsonString; // Update our "last successfully saved" state
+                            // console.log("Graph auto-saved successfully.");
+                        } else {
+                            console.error("Failed to auto-save graph. Server responded with:", response.status);
+                            // Optionally, handle retries or notify user
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error during auto-save:", error);
+                    });
+                }
+            }, 500); // 2 seconds
+
+            // Polling for updates from server every 1 second
+            let previousServerJsonString = null; // Stores the JSON string of the graph from the *previous* successful poll
+
+            setInterval(() => {
+                const activeEl = document.activeElement;
+                const isNodeTextEditing = activeEl && activeEl.classList.contains('node-text');
+                const isEdgeTextEditing = activeEl === edgeTextEditor;
+
+                if (isNodeTextEditing || isEdgeTextEditing) {
+                    // console.log("Polling: User is actively editing. Skipping poll cycle.");
+                    return; // Skip this poll cycle if user is actively typing
+                }
+
+                fetch('/api/graph')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Network response was not ok: ${response.statusText} (${response.status})`);
+                        }
+                        // Check for empty body before trying to parse JSON, treat as empty graph
+                        if (response.status === 204 || response.headers.get("content-length") === "0") {
+                            return { nodes: [], edges: [] }; 
+                        }
+                        return response.json();
+                    })
+                    .then(dataFromServer => {
+                        // Ensure dataFromServer is a valid graph structure, even if server sends null/undefined or malformed
+                        const newServerJsonString = JSON.stringify(
+                            (dataFromServer && typeof dataFromServer.nodes !== 'undefined' && typeof dataFromServer.edges !== 'undefined') 
+                                ? dataFromServer 
+                                : { nodes: [], edges: [] }, 
+                            null, 
+                            2
+                        );
+
+                        if (newServerJsonString === previousServerJsonString) {
+                            // Server state hasn't changed since the last time we successfully processed its state.
+                            // No action needed. Local changes (if any, and not yet auto-saved) will persist visually.
+                            // console.log("Polling: Server data unchanged since last poll processing.");
+                        } else {
+                            // Server state IS different from what we last successfully processed from the server.
+                            const localCurrentJson = getGraphAsJSONString(); // Get the absolute current client-side state
+                            
+                            if (newServerJsonString !== localCurrentJson) {
+                                // The new server state is also different from our current live client state.
+                                // This means we need to load the server's version.
+                                // console.log("Polling: Server data changed and differs from local client state. Loading from server.");
+                                loadGraphFromJSON(newServerJsonString);
+                                // currentGraphJSON is updated inside loadGraphFromJSON
+                            } else {
+                                // The new server state is different from previousServerJsonString, but it *matches*
+                                // our current live client state. This likely means our auto-save just updated the server,
+                                // and this poll is now seeing that fresh data. No UI reload needed.
+                                // We do, however, ensure currentGraphJSON reflects this new authoritative server state.
+                                // console.log("Polling: Server data changed, but matches current local client state (likely a recent auto-save). Updating internal checksums.");
+                                currentGraphJSON = newServerJsonString; 
+                            }
+                        }
+                        // Update previousServerJsonString to the state we just processed from the server.
+                        // This is crucial for the next poll cycle to correctly implement the "if server state hasn't changed" logic.
+                        previousServerJsonString = newServerJsonString;
+                    })
+                    .catch(error => {
+                        console.error("Error fetching graph updates:", error);
+                        // On error, previousServerJsonString is NOT updated.
+                        // This means the next successful poll will compare against the last known *good* server state,
+                        // which is the correct behavior to reassess if the server recovered or if the error persists.
+                    });
+            }, 500); // 1 second
+
+        }); // End of DOMContentLoaded
     </script>
 </div>
