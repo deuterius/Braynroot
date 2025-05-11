@@ -1,23 +1,22 @@
 import streamlit as st
 from pathlib import Path
 import fitz  # PyMuPDF
-import os
 import json
-import networkx as nx
 from datetime import datetime
 from streamlit_pdf_viewer import pdf_viewer
-import matplotlib.pyplot as plt
-from matplotlib.colors import to_rgba
-import uuid
-import numpy as np
-from io import BytesIO
-from mentalmap import ConceptualMap
 import html
 import requests
 from multi_tool_agent.splitting_agent import split_text
 from multi_tool_agent.agent import suggest_addition, feedback
 import asyncio
 from pdf import pdf_to_text
+
+
+@st.cache_data
+def get_reference_text(path):
+    return get_clean_text(path) 
+
+
 
 # --- CONFIGURATION ---
 UPLOAD_DIR = Path("uploads")
@@ -35,12 +34,9 @@ def from_custom_to_netowrkx_format(input_json):
     Returns:
         dict: Transformed JSON in the NetworkX-compatible format
     """
-    if type(input_json) is str:
-        try:
-            input_json = json.loads(input_json)
-        except json.JSONDecodeError:
-            raise ValueError("Invalid JSON string provided.")
-    
+
+    input_json = json.loads(input_json)
+    print(input_json)
     # Create the base structure for the output
     output_json = {
         "directed": False,
@@ -153,6 +149,8 @@ def get_feedback_graph(reference_text:str, g0: str, g1: str):
     g1_json = from_custom_to_netowrkx_format(g1)
     try:
         feedback_response = asyncio.run(feedback(text=reference_text, g0=g0_json, g1=g1_json))
+        print("quiiii")
+        print(feedback_response)
     except Exception as e:
         print(f"Error during feedback generation: {e}")
         feedback_response = "Error generating feedback"
@@ -301,7 +299,8 @@ if st.session_state.selected_pdf_display_path:
         st.session_state.pop('error_shown_for_missing_file', None)
         main_display_name = get_display_name_from_path(selected_path_object_for_display)
         st.header(f"📄 Working on: {main_display_name}")
-
+        
+        ref_text = get_reference_text(selected_path_object_for_display)
         tab1, tab2 = st.tabs(["Conceptual map", "Exercises"])
         with tab1:  
             # Add a slider to control the width ratio
@@ -350,16 +349,25 @@ if st.session_state.selected_pdf_display_path:
                 if 'button_clicked' not in st.session_state:
                     st.session_state.button_clicked = False
 
-                feed_b, ori_b, sug_b, sub_b = st.columns(4)
-                with feed_b:
-                    if st.button("Feedback"):
+
+                if st.button("Get Feedback"):
+                    response = requests.get("http://localhost:5000/api/graph")
+                    if response.status_code == 200:
+                        g1 = response.content.decode('utf-8')
+                    feedback_response = get_feedback_graph(ref_text, g1=g1, g0=g0)
+                    st.write(feedback_response)
+                    g0=g1
+
+                add_b, ori_b, sug_b, sub_b = st.columns(4)
+                with add_b:
+                    if st.button("Propose Addition"):
                         st.session_state.button_clicked = True
                 
                 if st.session_state.button_clicked:
                     response = requests.get("http://localhost:5000/api/graph")
                     if response.status_code == 200:
                         g1 = response.content.decode('utf-8')
-                        print(g1)
+                        
                         choice = g1
                         with ori_b:
                             if st.button("Original"):
@@ -368,7 +376,7 @@ if st.session_state.selected_pdf_display_path:
                         with sug_b:
                             if st.button("Suggested"):
                                 # Codice di andre
-                                choice = g1
+                                choice = feedback_response
 
                         with sub_b:
                             if st.button("Submit"):

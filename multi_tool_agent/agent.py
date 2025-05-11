@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
 import os
 import asyncio
-from google.adk.models.lite_llm import LiteLlm # For multi-model support
+#from google.adk.models.lite_llm import LiteLlm # For multi-model support
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 MODEL_GEMINI_2_0_FLASH = "gemini-2.5-flash-preview-04-17"
 MODEL_CLAUDE_SONNET_LATEST = "claude-3-7-sonnet-20250219"
-os.environ["GOOGLE_API_KEY"] = "AIzaSyDkMq3SUqW56rZ5EyrutxP-VbN8tJlinOs"
+os.environ["GOOGLE_API_KEY"] = "AIzaSyCMT787FU6HQ35ORnBee88L-V2PPjS-XGM"
 logging.basicConfig(level=logging.INFO)
 MAX_ITERATIONS = 3
 
